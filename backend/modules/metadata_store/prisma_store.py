@@ -9,6 +9,7 @@ from prisma import Prisma
 
 from backend.logger import logger
 from backend.modules.metadata_store.base import BaseMetadataStore
+from backend.modules.vector_db.client import VECTOR_STORE_CLIENT
 from backend.types import (
     AssociateDataSourceWithCollection,
     AssociatedDataSources,
@@ -244,6 +245,14 @@ class PrismaStore(BaseMetadataStore):
                 status_code=404,
                 detail=f"Failed to unassociate data source from collection {collection_name!r}. No such record found",
             )
+
+        # Remove documents associated with the data source
+        asyncio.create_task(
+            VECTOR_STORE_CLIENT.delete_documents_from_collection(
+                collection_name=collection_name,
+                data_source_fqn=data_source_fqn,
+            )
+        )
 
         # Validate the updated collection and return it
         return Collection.model_validate(updated_collection.model_dump())

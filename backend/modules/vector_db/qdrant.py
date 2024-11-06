@@ -411,3 +411,31 @@ class QdrantVectorDB(BaseVectorDB):
             f"[Qdrant] Listing {len(document_vector_points)} document vector points for collection {collection_name}"
         )
         return document_vector_points
+
+    def delete_documents_from_collection(
+        self, collection_name: str, **kwargs
+    ):
+        # create an empty filter
+        filter = models.Filter()
+        # If data_source_fqn is provided, add it to the filter
+        if kwargs.get("data_source_fqn"):
+            data_source_fqn = kwargs.get("data_source_fqn")
+            filter.must.append(
+                models.FieldCondition(
+                    key=f"metadata.{DATA_POINT_FQN_METADATA_KEY}",
+                    filter=models.Filter(
+                        must=[
+                            models.FieldCondition(
+                    key=f"metadata.{DATA_POINT_FQN_METADATA_KEY}",
+                                match=models.MatchText(text=data_source_fqn),
+                            ),
+                        ],
+                    ),
+                ),
+            )
+        
+        # Delete by filters
+        self.qdrant_client.delete(
+            collection_name=collection_name,
+            points_selector=models.FilterSelector(filter=filter),
+        )
